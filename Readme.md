@@ -78,8 +78,8 @@ You can configure the ECS Metrics Exporter using environment variables:
 
 Almost all metrics have common labels:
 
-- `container_name`: Container Name. For task metrics, "_task_" will be set.
-- `container_id`: Container Id. For task metrics, "_task_" will be set. Be careful that all containers have the same container_id, because this script scrapes the first 12 characters.
+- `container_name`: Container Name. For task metrics, `_task_` will be set.
+- `container_id`: Container Id. For task metrics, `_task_` will be set. Be careful that all containers have the same container_id, because this script scrapes the first 12 characters.
 - `task_family`: ECS Task family name.
 - `task_revision`: ECS Task Definitions revision number.
 

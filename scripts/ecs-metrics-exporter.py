@@ -17,109 +17,114 @@ import json
 import requests
 from datetime import datetime
 from prometheus_client import Counter, Gauge
+from prometheus_client import generate_latest
 from prometheus_client.core import CollectorRegistry
 from flask import Flask, Response
+from dateutil import parser
 
 app = Flask(__name__)
 
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 METADATA_URL_ENV = "ECS_CONTAINER_METADATA_URI_V4"
 METADATA_URL = "" if os.getenv("DEBUG") else os.getenv(METADATA_URL_ENV)
 LISTEN_PORT = os.getenv("ECS_METRICS_EXPORTER_PORT", "9546")
 
 registry = CollectorRegistry(auto_describe=False)
 
-labels = ["container_name", "container_id", "task_family", "task_revision"]
 
-# Metrics definition
-metrics = {
-    "counter_cpu_usage_sec": Counter(
-        "ee_container_cpu_usage_seconds_total",
-        "cpu_stats->cpu_usage->total_usage conver nano sec to sec",
-        labels,
-        registry=registry,
-    ),
-    "gauge_mem_usage_total_bytes": Gauge(
-        "ee_container_memory_usage_byte",
-        "memory_stats->usage with cache",
-        labels,
-        registry=registry,
-    ),
-    "gauge_mem_usage_total_bytes_without_cache": Gauge(
-        "ee_container_memory_usage_without_cache_byte",
-        "memory_stats->usage - memory_stats->cache",
-        labels,
-        registry=registry,
-    ),
-    "gauge_network_io_rx_bytes": Gauge(
-        "ee_container_network_io_rx_bytes",
-        "network_io_rx_bytes",
-        labels,
-        registry=registry,
-    ),
-    "gauge_network_io_tx_bytes": Gauge(
-        "ee_container_network_io_tx_bytes",
-        "network_io_tx_bytes",
-        labels,
-        registry=registry,
-    ),
-    "gauge_block_io_read_bytes": Gauge(
-        "ee_container_block_io_read_bytes",
-        "block_io_read_bytes",
-        labels,
-        registry=registry,
-    ),
-    "gauge_block_io_write_bytes": Gauge(
-        "ee_container_block_io_write_bytes",
-        "block_io_write_bytes",
-        labels,
-        registry=registry,
-    ),
-    "gauge_block_io_read_ops": Gauge(
-        "ee_container_block_io_read_ops", "block_io_read_ops", labels, registry=registry
-    ),
-    "gauge_block_io_write_ops": Gauge(
-        "ee_container_block_io_write_ops",
-        "block_io_write_ops",
-        labels,
-        registry=registry,
-    ),
-    "gauge_pull_started_at_time": Gauge(
-        "ee_task_pull_started_at_time",
-        "tasks PullStartedAt epoch",
-        labels,
-        registry=registry,
-    ),
-    "gauge_pull_stopped_at_time": Gauge(
-        "ee_task_pull_stopped_at_time",
-        "tasks PullStoppedAt epoch",
-        labels,
-        registry=registry,
-    ),
-    "gauge_container_last_started_at_time": Gauge(
-        "ee_container_last_started_at_time",
-        "epoch that maximum StartedAt in all containers",
-        labels,
-        registry=registry,
-    ),
-    "gauge_task_cpu_limit": Gauge(
-        "ee_task_cpu_limit",
-        "task cpu limit (ex. 0.5, 1.0..)",
-        labels,
-        registry=registry,
-    ),
-    "gauge_task_memory_limit_byte": Gauge(
-        "ee_task_memory_limit_byte",
-        "task memory limit bytes",
-        labels,
-        registry=registry,
-    ),
-    "ecs_metrics_exporter_success": Gauge(
-        "ecs_metrics_exporter_success",
-        "Indicates if the ECS metrics exporter succeeded. 0 for failure, 1 for success.",
-        registry=registry,
-    ),
-}
+def create_metrics(registry):
+    labels = ["container_name", "container_id", "task_family", "task_revision"]
+    return {
+        "counter_cpu_usage_sec": Counter(
+            "ee_container_cpu_usage_seconds_total",
+            "cpu_stats->cpu_usage->total_usage conver nano sec to sec",
+            labels,
+            registry=registry,
+        ),
+        "gauge_mem_usage_total_bytes": Gauge(
+            "ee_container_memory_usage_byte",
+            "memory_stats->usage with cache",
+            labels,
+            registry=registry,
+        ),
+        "gauge_mem_usage_total_bytes_without_cache": Gauge(
+            "ee_container_memory_usage_without_cache_byte",
+            "memory_stats->usage - memory_stats->cache",
+            labels,
+            registry=registry,
+        ),
+        "gauge_network_io_rx_bytes": Gauge(
+            "ee_container_network_io_rx_bytes",
+            "network_io_rx_bytes",
+            labels,
+            registry=registry,
+        ),
+        "gauge_network_io_tx_bytes": Gauge(
+            "ee_container_network_io_tx_bytes",
+            "network_io_tx_bytes",
+            labels,
+            registry=registry,
+        ),
+        "gauge_block_io_read_bytes": Gauge(
+            "ee_container_block_io_read_bytes",
+            "block_io_read_bytes",
+            labels,
+            registry=registry,
+        ),
+        "gauge_block_io_write_bytes": Gauge(
+            "ee_container_block_io_write_bytes",
+            "block_io_write_bytes",
+            labels,
+            registry=registry,
+        ),
+        "gauge_block_io_read_ops": Gauge(
+            "ee_container_block_io_read_ops",
+            "block_io_read_ops",
+            labels,
+            registry=registry,
+        ),
+        "gauge_block_io_write_ops": Gauge(
+            "ee_container_block_io_write_ops",
+            "block_io_write_ops",
+            labels,
+            registry=registry,
+        ),
+        "gauge_pull_started_at_time": Gauge(
+            "ee_task_pull_started_at_time",
+            "tasks PullStartedAt epoch",
+            labels,
+            registry=registry,
+        ),
+        "gauge_pull_stopped_at_time": Gauge(
+            "ee_task_pull_stopped_at_time",
+            "tasks PullStoppedAt epoch",
+            labels,
+            registry=registry,
+        ),
+        "gauge_container_last_started_at_time": Gauge(
+            "ee_container_last_started_at_time",
+            "epoch that maximum StartedAt in all containers",
+            labels,
+            registry=registry,
+        ),
+        "gauge_task_cpu_limit": Gauge(
+            "ee_task_cpu_limit",
+            "task cpu limit (ex. 0.5, 1.0..)",
+            labels,
+            registry=registry,
+        ),
+        "gauge_task_memory_limit_byte": Gauge(
+            "ee_task_memory_limit_byte",
+            "task memory limit bytes",
+            labels,
+            registry=registry,
+        ),
+        "ecs_metrics_exporter_success": Gauge(
+            "ecs_metrics_exporter_success",
+            "Indicates if the ECS metrics exporter succeeded. 0 for failure, 1 for success.",
+            registry=registry,
+        ),
+    }
 
 
 def get_short_container_id(container_id_full):
@@ -143,25 +148,29 @@ def fetch_task_metadata():
 
     response_task = requests.get(task_url)
     if not response_task.ok:
-        raise Exception(f"Failed to fetch task metadata with status code {response_task.status_code}")
+        raise Exception(
+            f"Failed to fetch task metadata with status code {response_task.status_code}"
+        )
     task = response_task.json()
 
     response_stats = requests.get(stats_url)
     if not response_stats.ok:
-        raise Exception(f"Failed to fetch stats metadata with status code {response_stats.status_code}")
-    task = response_stats.json()
+        raise Exception(
+            f"Failed to fetch stats metadata with status code {response_stats.status_code}"
+        )
+    stats = response_stats.json()
 
     return task, stats
 
 
 def str2epoch(time_str):
     """
-    Converts a time string to an epoch timestamp.
+    Converts a time string with potential nanoseconds into an epoch timestamp.
 
-    :param time_str: The time string.
-    :return: The epoch timestamp.
+    :param time_str: The time string, possibly including nanoseconds.
+    :return: The epoch timestamp as an integer.
     """
-    dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ")
+    dt = parser.parse(time_str)
     return int(dt.timestamp())
 
 
@@ -172,106 +181,173 @@ def collect_ecs_task_metadata():
     This function fetches task metadata, computes various metrics based on the metadata,
     and updates the Prometheus metrics accordingly.
     """
-    task, stats = fetch_task_metadata()
+    try:
+        task, stats = fetch_task_metadata()
 
-    # Task info
-    task_family = task["Family"]
-    task_revision = task["Revision"]
-    task_labels = {
-        "container_name": "_task_",
-        "container_id": "_task_",
-        "task_family": task_family,
-        "task_revision": task_revision,
-    }
+        registry = CollectorRegistry(auto_describe=False)
+        metrics = create_metrics(registry)
 
-    # Task pull times
-    pull_start = str2epoch(task["PullStartedAt"]) if "PullStartedAt" in task else 0
-    pull_stop = str2epoch(task["PullStoppedAt"]) if "PullStoppedAt" in task else 0
-    metrics["gauge_pull_started_at_time"].labels(**task_labels).set(pull_start)
-    metrics["gauge_pull_stopped_at_time"].labels(**task_labels).set(pull_stop)
+        task_containers_info = {}
+        for ci in task.get("Containers", []):
+            task_containers_info[ci["DockerId"]] = ci
 
-    # Task limits
-    task_cpu_limit = float(task["Limits"]["CPU"])
-    task_memory_limit_bytes = int(task["Limits"]["Memory"]) * 1024 * 1024
-    metrics["gauge_task_cpu_limit"].labels(**task_labels).set(task_cpu_limit)
-    metrics["gauge_task_memory_limit_byte"].labels(**task_labels).set(
-        task_memory_limit_bytes
-    )
-
-    # Process each container in the task
-    last_started_at_time = 0
-    for container_stat in stats.values():
-        container_id = get_short_container_id(container_stat["id"])
-        container_name = container_stat["name"]
-        labels = {
-            "container_name": container_name,
-            "container_id": container_id,
+        # Task info
+        task_family = task["Family"]
+        task_revision = task["Revision"]
+        task_labels = {
+            "container_name": "_task_",
+            "container_id": "_task_",
             "task_family": task_family,
             "task_revision": task_revision,
         }
 
-        # Container start time
-        started_at = (
-            str2epoch(container_stat["read"]) if "read" in container_stat else 0
-        )
-        last_started_at_time = max(last_started_at_time, started_at)
+        # Task pull times
+        pull_start = str2epoch(task["PullStartedAt"]) if "PullStartedAt" in task else 0
+        pull_stop = str2epoch(task["PullStoppedAt"]) if "PullStoppedAt" in task else 0
+        metrics["gauge_pull_started_at_time"].labels(**task_labels).set(pull_start)
+        metrics["gauge_pull_stopped_at_time"].labels(**task_labels).set(pull_stop)
 
-        # CPU usage
-        cpu_usage_sec = container_stat["cpu_stats"]["cpu_usage"]["total_usage"] / 1e9
-        metrics["counter_cpu_usage_sec"].labels(**labels).inc(cpu_usage_sec)
-
-        # Memory usage
-        mem_usage_bytes = container_stat["memory_stats"]["usage"]
-        mem_cache_bytes = container_stat["memory_stats"]["stats"].get("cache", 0)
-        mem_usage_bytes_without_cache = mem_usage_bytes - mem_cache_bytes
-        metrics["gauge_mem_usage_total_bytes"].labels(**labels).set(mem_usage_bytes)
-        metrics["gauge_mem_usage_total_bytes_without_cache"].labels(**labels).set(
-            mem_usage_bytes_without_cache
+        # Task limits
+        task_cpu_limit = float(task["Limits"]["CPU"])
+        task_memory_limit_bytes = int(task["Limits"]["Memory"]) * 1024 * 1024
+        metrics["gauge_task_cpu_limit"].labels(**task_labels).set(task_cpu_limit)
+        metrics["gauge_task_memory_limit_byte"].labels(**task_labels).set(
+            task_memory_limit_bytes
         )
 
-        # Network IO
-        rx_bytes = sum(
-            interface["rx_bytes"] for interface in container_stat["networks"].values()
-        )
-        tx_bytes = sum(
-            interface["tx_bytes"] for interface in container_stat["networks"].values()
-        )
-        metrics["gauge_network_io_rx_bytes"].labels(**labels).set(rx_bytes)
-        metrics["gauge_network_io_tx_bytes"].labels(**labels).set(tx_bytes)
+        sum_of_cpu_usage_sec = 0
+        sum_of_memory_usage_bytes = 0
+        sum_of_memory_usage_actual_bytes = 0
+        sum_of_network_io_rx_bytes = 0
+        sum_of_network_io_tx_bytes = 0
+        sum_of_block_io_read_bytes = 0
+        sum_of_block_io_write_bytes = 0
+        sum_of_block_io_read_ops = 0
+        sum_of_block_io_write_ops = 0
 
-        # Block IO
-        for blk_io in container_stat["blkio_stats"]["io_service_bytes_recursive"]:
-            if blk_io["op"] == "Read":
-                metrics["gauge_block_io_read_bytes"].labels(**labels).set(
-                    blk_io["value"]
-                )
-            elif blk_io["op"] == "Write":
-                metrics["gauge_block_io_write_bytes"].labels(**labels).set(
-                    blk_io["value"]
-                )
+        # Process each container in the task
+        last_started_at_time = 0
+        for container_stat in stats.values():
+            container_id = get_short_container_id(container_stat["id"])
+            container_name = container_stat["name"]
+            labels = {
+                "container_name": container_name,
+                "container_id": container_id,
+                "task_family": task_family,
+                "task_revision": task_revision,
+            }
 
-    # Set the last started container time for the task
-    metrics["gauge_container_last_started_at_time"].labels(**task_labels).set(
-        last_started_at_time
-    )
+            # Container start time
+            started_at = str2epoch(
+                task_containers_info[container_stat["id"]]["StartedAt"]
+            )
+            print(f"started_at:{started_at}")
+            last_started_at_time = max(last_started_at_time, started_at)
+            print(f"last_started_at_time:{last_started_at_time}")
+
+            # CPU usage
+            cpu_usage_sec = (
+                container_stat["cpu_stats"]["cpu_usage"]["total_usage"] / 1e9
+            )
+            metrics["counter_cpu_usage_sec"].labels(**labels).inc(cpu_usage_sec)
+            sum_of_cpu_usage_sec += cpu_usage_sec
+
+            # Memory usage
+            mem_usage_bytes = container_stat["memory_stats"]["usage"]
+            mem_cache_bytes = container_stat["memory_stats"]["stats"].get("cache", 0)
+            mem_usage_bytes_without_cache = mem_usage_bytes - mem_cache_bytes
+            metrics["gauge_mem_usage_total_bytes"].labels(**labels).set(mem_usage_bytes)
+            metrics["gauge_mem_usage_total_bytes_without_cache"].labels(**labels).set(
+                mem_usage_bytes_without_cache
+            )
+            sum_of_memory_usage_bytes += mem_usage_bytes
+            sum_of_memory_usage_actual_bytes += mem_usage_bytes_without_cache
+
+            # Network IO
+            rx_bytes = sum(
+                interface["rx_bytes"]
+                for interface in container_stat["networks"].values()
+            )
+            tx_bytes = sum(
+                interface["tx_bytes"]
+                for interface in container_stat["networks"].values()
+            )
+            metrics["gauge_network_io_rx_bytes"].labels(**labels).set(rx_bytes)
+            metrics["gauge_network_io_tx_bytes"].labels(**labels).set(tx_bytes)
+            sum_of_network_io_rx_bytes += rx_bytes
+            sum_of_network_io_tx_bytes += tx_bytes
+
+            # Block IO
+            for blk_io in container_stat["blkio_stats"]["io_service_bytes_recursive"]:
+                if blk_io["op"] == "Read":
+                    metrics["gauge_block_io_read_bytes"].labels(**labels).set(
+                        blk_io["value"]
+                    )
+                    sum_of_block_io_read_bytes += blk_io["value"]
+                elif blk_io["op"] == "Write":
+                    metrics["gauge_block_io_write_bytes"].labels(**labels).set(
+                        blk_io["value"]
+                    )
+                    sum_of_block_io_write_bytes += blk_io["value"]
+
+            for blk_io in container_stat["blkio_stats"]["io_serviced_recursive"]:
+                if blk_io["op"] == "Read":
+                    metrics["gauge_block_io_read_ops"].labels(**labels).set(
+                        blk_io["value"]
+                    )
+                    sum_of_block_io_read_ops += blk_io["value"]
+                elif blk_io["op"] == "Write":
+                    metrics["gauge_block_io_write_ops"].labels(**labels).set(
+                        blk_io["value"]
+                    )
+                    sum_of_block_io_write_ops += blk_io["value"]
+
+        metrics["counter_cpu_usage_sec"].labels(**task_labels).inc(sum_of_cpu_usage_sec)
+        metrics["gauge_mem_usage_total_bytes"].labels(**task_labels).set(
+            sum_of_memory_usage_bytes
+        )
+        metrics["gauge_mem_usage_total_bytes_without_cache"].labels(**task_labels).set(
+            sum_of_memory_usage_actual_bytes
+        )
+        metrics["gauge_network_io_rx_bytes"].labels(**task_labels).set(
+            sum_of_network_io_rx_bytes
+        )
+        metrics["gauge_network_io_tx_bytes"].labels(**task_labels).set(
+            sum_of_network_io_tx_bytes
+        )
+        metrics["gauge_block_io_read_bytes"].labels(**task_labels).set(
+            sum_of_block_io_read_bytes
+        )
+        metrics["gauge_block_io_write_bytes"].labels(**task_labels).set(
+            sum_of_block_io_write_bytes
+        )
+        metrics["gauge_block_io_read_ops"].labels(**task_labels).set(
+            sum_of_block_io_read_ops
+        )
+        metrics["gauge_block_io_write_ops"].labels(**task_labels).set(
+            sum_of_block_io_write_ops
+        )
+
+        # Set the last started container time for the task
+        metrics["gauge_container_last_started_at_time"].labels(**task_labels).set(
+            last_started_at_time
+        )
+        metrics["ecs_metrics_exporter_success"].set(1)
+    except Exception as e:
+        print(f"error:{e}")
+        metrics["ecs_metrics_exporter_success"].set(0)
+
+    return generate_latest(registry)
 
 
 @app.route("/metrics")
 def metrics_endpoint():
-    """
-    Endpoint for Prometheus metrics.
-
-    This function is called when Prometheus scrapes the '/metrics' endpoint.
-    It triggers the collection of ECS task metadata and metrics computation.
-    """
     try:
-        collect_ecs_task_metadata()
-        metrics["ecs_metrics_exporter_success"].set(1)
-        return Response(registry.expose_metrics(), mimetype="text/plain")
+        metrics_data = collect_ecs_task_metadata()
+        return Response(metrics_data, mimetype="text/plain")
     except Exception as e:
         app.logger.error(f"Failed to fetch some metrics: {e}")
-        metrics["ecs_metrics_exporter_success"].set(0)
-        return Response(registry.expose_metrics(), mimetype="text/plain")
+        return Response("Error collecting metrics", status=500, mimetype="text/plain")
 
 
 @app.route("/stats")

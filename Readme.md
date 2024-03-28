@@ -60,6 +60,23 @@ You can also deploy the ECS Metrics Exporter as a Docker container. A `Dockerfil
    docker run -p 9546:9546 ecs-metrics-exporter
    ```
 
+3. Or, use make
+   ```bash
+   make build
+   ```
+
+## Tests
+
+1. Build Docker image with make
+   ```bash
+   make build
+   ```
+
+2. Run tests
+   ```bash
+   make test
+   ```
+
 ## Configuration
 
 You can configure the ECS Metrics Exporter using environment variables:

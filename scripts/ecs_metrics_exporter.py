@@ -24,9 +24,8 @@ from dateutil import parser
 
 app = Flask(__name__)
 
-VERSION = "0.0.2"
+VERSION = "0.0.3"
 METADATA_URL_ENV = "ECS_CONTAINER_METADATA_URI_V4"
-METADATA_URL = "" if os.getenv("DEBUG") else os.getenv(METADATA_URL_ENV)
 LISTEN_PORT = os.getenv("ECS_METRICS_EXPORTER_PORT", "9546")
 
 registry = CollectorRegistry(auto_describe=False)
@@ -143,6 +142,7 @@ def fetch_task_metadata():
 
     :return: A tuple of (task_metadata, task_stats).
     """
+    METADATA_URL = os.getenv(METADATA_URL_ENV)
     task_url = f"{METADATA_URL}/task"
     stats_url = f"{METADATA_URL}/task/stats"
 
@@ -241,9 +241,7 @@ def collect_ecs_task_metadata():
             started_at = str2epoch(
                 task_containers_info[container_stat["id"]]["StartedAt"]
             )
-            print(f"started_at:{started_at}")
             last_started_at_time = max(last_started_at_time, started_at)
-            print(f"last_started_at_time:{last_started_at_time}")
 
             # CPU usage
             cpu_usage_sec = (
@@ -334,7 +332,7 @@ def collect_ecs_task_metadata():
         )
         metrics["ecs_metrics_exporter_success"].set(1)
     except Exception as e:
-        print(f"error:{e}")
+        app.logger.error(f"Failed to fetch some metrics: {e}")
         metrics["ecs_metrics_exporter_success"].set(0)
 
     return generate_latest(registry)
@@ -342,12 +340,8 @@ def collect_ecs_task_metadata():
 
 @app.route("/metrics")
 def metrics_endpoint():
-    try:
-        metrics_data = collect_ecs_task_metadata()
-        return Response(metrics_data, mimetype="text/plain")
-    except Exception as e:
-        app.logger.error(f"Failed to fetch some metrics: {e}")
-        return Response("Error collecting metrics", status=500, mimetype="text/plain")
+    metrics_data = collect_ecs_task_metadata()
+    return Response(metrics_data, mimetype="text/plain")
 
 
 @app.route("/stats")
@@ -378,33 +372,3 @@ if __name__ == "__main__":
     # Run the Flask app
     app.run(host="0.0.0.0", port=LISTEN_PORT)
 
-# URL mappings
-# /metrics - Provides prometheus metrics
-# /stats - Provides raw JSON text that get from ECS_CONTAINER_METADATA_URI_V4/task/stats
-# /task - Provides raw JSON text that get from ECS_CONTAINER_METADATA_URI_V4/task
-
-# Labels
-# Almost all metrics have common labels:
-# - container_name: Container Name. For task metrics, "_task_" will be set.
-# - container_id: Container Id. For task metrics, "_task_" will be set.
-#   Be careful that all container has a same container_id, because this script scrapes prefix 12 characters.
-# - task_family: ECS Task family name
-# - task_revision: ECS Task Definitions revision number
-
-# Exported Metrics
-# All metrics have common prefix "ee_"
-# - ee_ecs_metrics_exporter_success: When no raise occurred, set 1. Some raise occurred, set 0. This metrics has no labels.
-# - ee_task_cpu_limit: Task CPU Limits. When allocate CPU unit 512, this metrics return 0.5.
-# - ee_task_memory_limit_byte: Task Memory Limits.
-# - ee_container_cpu_usage_seconds_total: Container CPU usage seconds (not nanoseconds). This is a Counter.
-#   So, you can calculate CPU usage percentage by using the Prometheus `rate` function.
-# - ee_container_memory_usage_byte: Memory usage bytes.
-# - ee_container_network_io_rx_bytes: Received bytes that sum all interfaces.
-# - ee_container_network_io_tx_bytes: Transport bytes that sum all interfaces.
-# - ee_container_block_io_read_bytes: Block read IO bytes that sum all block devices.
-# - ee_container_block_io_write_bytes: Block write IO bytes that sum all block devices.
-# - ee_container_block_io_read_ops: Block read IO ops that sum all block devices.
-# - ee_container_block_io_write_ops: Block write IO ops that sum all block devices.
-
-# Note: Due to space constraints, not all metrics have been fully implemented in this code snippet.
-# You may need to implement the remaining metrics and their corresponding logic based on the Perl script provided.

@@ -35,7 +35,6 @@ class TestMetricsEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         content = response.data.decode("utf-8")
 
-        # ecs_metrics_exporter_success が1であることを確認
         self.assertRegex(content, r"ecs_metrics_exporter_success 1")
 
         patterns = [

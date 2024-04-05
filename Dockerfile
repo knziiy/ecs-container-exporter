@@ -8,7 +8,8 @@ COPY requirements.txt /requirements.txt
 
 RUN pip install --no-cache-dir -r /requirements.txt
 
-COPY ./scripts/ecs_metrics_exporter.py /scripts/ecs_metrics_exporter.py
+COPY ./scripts /scripts
+ENV PYTHONPATH "/"
 
 EXPOSE 9546
 

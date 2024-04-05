@@ -19,12 +19,13 @@ from datetime import datetime
 from prometheus_client import Counter, Gauge
 from prometheus_client import generate_latest
 from prometheus_client.core import CollectorRegistry
-from flask import Flask, Response
+from fastapi import FastAPI, Response
 from dateutil import parser
+from starlette.responses import PlainTextResponse, JSONResponse
 
-app = Flask(__name__)
+app = FastAPI()
 
-VERSION = "0.0.3"
+VERSION = "0.1.0"
 METADATA_URL_ENV = "ECS_CONTAINER_METADATA_URI_V4"
 LISTEN_PORT = os.getenv("ECS_METRICS_EXPORTER_PORT", "9546")
 
@@ -338,13 +339,13 @@ def collect_ecs_task_metadata():
     return generate_latest(registry)
 
 
-@app.route("/metrics")
+@app.get("/metrics", response_class=PlainTextResponse)
 def metrics_endpoint():
     metrics_data = collect_ecs_task_metadata()
-    return Response(metrics_data, mimetype="text/plain")
+    return Response(content=metrics_data, media_type="text/plain")
 
 
-@app.route("/stats")
+@app.get("/stats", response_class=JSONResponse)
 def stats():
     """
     Endpoint to provide raw JSON statistics.
@@ -353,10 +354,10 @@ def stats():
     It returns raw JSON statistics obtained from the ECS metadata endpoint.
     """
     _, stats = fetch_task_metadata()
-    return Response(json.dumps(stats), mimetype="application/json")
+    return JSONResponse(content=stats)
 
 
-@app.route("/task")
+@app.get("/task", response_class=JSONResponse)
 def task():
     """
     Endpoint to provide raw JSON task metadata.
@@ -365,7 +366,7 @@ def task():
     It returns raw JSON task metadata obtained from the ECS metadata endpoint.
     """
     task, _ = fetch_task_metadata()
-    return Response(json.dumps(task), mimetype="application/json")
+    return JSONResponse(content=task)
 
 
 if __name__ == "__main__":

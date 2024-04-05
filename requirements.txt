@@ -1,4 +1,7 @@
-Flask==3.0.2
+fastapi==0.110.1
 prometheus_client==0.20.0
 requests==2.31.0
 python-dateutil>=2.8.1
+pytest
+uvicorn
+httpx

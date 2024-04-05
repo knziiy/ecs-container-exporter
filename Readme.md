@@ -1,6 +1,6 @@
 # ECS Metrics Exporter
 
-ECS Metrics Exporter is a simple Flask application designed to fetch and expose ECS Task Metadata v4 and Docker stats for Prometheus monitoring. This tool is particularly useful for containers running on AWS Fargate, where traditional monitoring agents may not have full access to the underlying host.
+ECS Metrics Exporter is a simple FastAPI application designed to fetch and expose ECS Task Metadata v4 and Docker stats for Prometheus monitoring. This tool is particularly useful for containers running on AWS Fargate, where traditional monitoring agents may not have full access to the underlying host.
 
 ## Features
 

@@ -1,16 +1,15 @@
 import unittest
-import requests
+from fastapi.testclient import TestClient
 from multiprocessing import Process
 import os
 from scripts.ecs_metrics_exporter import app
 import time
 
-
 def run_mock_server():
     from tests.mock_endpoint import app as mock_app
+    import uvicorn
 
-    mock_app.run(port=5000)
-
+    uvicorn.run(mock_app, host="127.0.0.1", port=5000)
 
 class TestMetricsEndpoint(unittest.TestCase):
     @classmethod
@@ -21,9 +20,7 @@ class TestMetricsEndpoint(unittest.TestCase):
 
         os.environ["ECS_CONTAINER_METADATA_URI_V4"] = "http://localhost:5000"
 
-        # Set up Flask app for test
-        cls.app = app.test_client()
-        cls.app.testing = True
+        cls.client = TestClient(app)
 
     @classmethod
     def tearDownClass(cls):
@@ -31,11 +28,11 @@ class TestMetricsEndpoint(unittest.TestCase):
         cls.mock_server_process.join()
 
     def test_metrics_endpoint(self):
-        response = self.app.get("/metrics")
+        response = self.client.get("/metrics")
         self.assertEqual(response.status_code, 200)
-        content = response.data.decode("utf-8")
+        content = response.content.decode("utf-8")
 
-        self.assertRegex(content, r"ecs_metrics_exporter_success 1")
+        self.assertIn("ecs_metrics_exporter_success 1", content)
 
         patterns = [
             r'ee_task_cpu_limit{[^}]*task_family="taskdef-name-test",[^}]*task_revision="123"[^}]*} 0\.5',
@@ -45,7 +42,6 @@ class TestMetricsEndpoint(unittest.TestCase):
         ]
         for pattern in patterns:
             self.assertRegex(content, pattern)
-
 
 if __name__ == "__main__":
     unittest.main()

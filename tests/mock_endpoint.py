@@ -1,6 +1,7 @@
-from flask import Flask, jsonify
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
-app = Flask(__name__)
+app = FastAPI()
 
 test_json = {
     "stats": {
@@ -360,14 +361,13 @@ test_json = {
 }
 
 
-@app.route("/task")
-def task():
-    return jsonify(test_json["task"])
+@app.get("/task")
+async def task():
+    return JSONResponse(content=test_json["task"])
 
-
-@app.route("/task/stats")
-def task_stats():
-    return jsonify(test_json["stats"])
+@app.get("/task/stats")
+async def task_stats():
+    return JSONResponse(content=test_json["stats"])
 
 
 if __name__ == "__main__":

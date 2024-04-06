@@ -4,7 +4,7 @@
 """
 ecs_metrics_exporter - provides ECS Task Metadata v4 values for prometheus
 
-This module is a simple Flask application. A container running on Fargate can get
+This module is a simple FastAPI application. A container running on Fargate can get
 Docker stats API data and ECS Task data from the Task metadata endpoint.
 More details at https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
 
@@ -15,6 +15,8 @@ and returns plain text formatted for prometheus.
 import os
 import json
 import requests
+import uvicorn
+import logging
 from datetime import datetime
 from prometheus_client import Counter, Gauge
 from prometheus_client import generate_latest
@@ -23,11 +25,14 @@ from fastapi import FastAPI, Response
 from dateutil import parser
 from starlette.responses import PlainTextResponse, JSONResponse
 
-app = FastAPI()
-
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 METADATA_URL_ENV = "ECS_CONTAINER_METADATA_URI_V4"
 LISTEN_PORT = os.getenv("ECS_METRICS_EXPORTER_PORT", "9546")
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+app = FastAPI()
 
 registry = CollectorRegistry(auto_describe=False)
 
@@ -182,11 +187,11 @@ def collect_ecs_task_metadata():
     This function fetches task metadata, computes various metrics based on the metadata,
     and updates the Prometheus metrics accordingly.
     """
+    registry = CollectorRegistry(auto_describe=False)
+    metrics = create_metrics(registry)
+
     try:
         task, stats = fetch_task_metadata()
-
-        registry = CollectorRegistry(auto_describe=False)
-        metrics = create_metrics(registry)
 
         task_containers_info = {}
         for ci in task.get("Containers", []):
@@ -333,7 +338,7 @@ def collect_ecs_task_metadata():
         )
         metrics["ecs_metrics_exporter_success"].set(1)
     except Exception as e:
-        app.logger.error(f"Failed to fetch some metrics: {e}")
+        logger.error(f"Failed to fetch some metrics: {e}")
         metrics["ecs_metrics_exporter_success"].set(0)
 
     return generate_latest(registry)
@@ -368,7 +373,5 @@ def task():
     task, _ = fetch_task_metadata()
     return JSONResponse(content=task)
 
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=LISTEN_PORT)
-
+    uvicorn.run(app, host="0.0.0.0", port=int(LISTEN_PORT), reload=False)

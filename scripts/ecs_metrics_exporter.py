@@ -6,18 +6,18 @@ ecs_metrics_exporter - provides ECS Task Metadata v4 values for prometheus
 
 This module is a simple FastAPI application. A container running on Fargate can get
 Docker stats API data and ECS Task data from the Task metadata endpoint.
-More details at https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
+More details at
+https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v4.html
 
 ecs_metrics_exporter fetches some metrics from Task metadata endpoint version 4,
 and returns plain text formatted for prometheus.
 """
 
 import os
-import json
+import logging
+
 import requests
 import uvicorn
-import logging
-from datetime import datetime
 from prometheus_client import Counter, Gauge
 from prometheus_client import generate_latest
 from prometheus_client.core import CollectorRegistry
@@ -25,7 +25,7 @@ from fastapi import FastAPI, Response
 from dateutil import parser
 from starlette.responses import PlainTextResponse, JSONResponse
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 METADATA_URL_ENV = "ECS_CONTAINER_METADATA_URI_V4"
 LISTEN_PORT = os.getenv("ECS_METRICS_EXPORTER_PORT", "9546")
 
@@ -33,8 +33,6 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-
-registry = CollectorRegistry(auto_describe=False)
 
 
 def create_metrics(registry):
@@ -60,14 +58,15 @@ def create_metrics(registry):
             - "gauge_container_last_started_at_time": Gauge for the last container start time in epoch.
             - "gauge_task_cpu_limit": Gauge for task CPU limit.
             - "gauge_task_memory_limit_byte": Gauge for task memory limit in bytes.
-            - "ecs_metrics_exporter_success": Gauge indicating if the ECS metrics exporter succeeded (0 for failure, 1 for success).
+            - "ecs_metrics_exporter_success": Gauge indicating if the ECS metrics exporter succeeded
+              (0 for failure, 1 for success).
     """
-    
+
     labels = ["container_name", "container_id", "task_family", "task_revision"]
     return {
         "counter_cpu_usage_sec": Counter(
             "ee_container_cpu_usage_seconds_total",
-            "cpu_stats->cpu_usage->total_usage conver nano sec to sec",
+            "cpu_stats->cpu_usage->total_usage convert nano sec to sec",
             labels,
             registry=registry,
         ),
@@ -173,20 +172,20 @@ def fetch_task_metadata():
 
     :return: A tuple of (task_metadata, task_stats).
     """
-    METADATA_URL = os.getenv(METADATA_URL_ENV)
-    task_url = f"{METADATA_URL}/task"
-    stats_url = f"{METADATA_URL}/task/stats"
+    metadata_url = os.getenv(METADATA_URL_ENV)
+    task_url = f"{metadata_url}/task"
+    stats_url = f"{metadata_url}/task/stats"
 
-    response_task = requests.get(task_url)
+    response_task = requests.get(task_url, timeout=5)
     if not response_task.ok:
-        raise Exception(
+        raise requests.exceptions.HTTPError(
             f"Failed to fetch task metadata with status code {response_task.status_code}"
         )
     task = response_task.json()
 
-    response_stats = requests.get(stats_url)
+    response_stats = requests.get(stats_url, timeout=5)
     if not response_stats.ok:
-        raise Exception(
+        raise requests.exceptions.HTTPError(
             f"Failed to fetch stats metadata with status code {response_stats.status_code}"
         )
     stats = response_stats.json()
@@ -362,8 +361,8 @@ def collect_ecs_task_metadata():
             last_started_at_time
         )
         metrics["ecs_metrics_exporter_success"].set(1)
-    except Exception as e:
-        logger.error(f"Failed to fetch some metrics: {e}")
+    except requests.exceptions.RequestException as e:
+        logger.error("Failed to fetch some metrics: %s", e)
         metrics["ecs_metrics_exporter_success"].set(0)
 
     return generate_latest(registry)
@@ -371,32 +370,39 @@ def collect_ecs_task_metadata():
 
 @app.get("/metrics", response_class=PlainTextResponse)
 def metrics_endpoint():
+    """
+    Endpoint to provide Prometheus-formatted metrics.
+
+    This function is called when the '/metrics' endpoint is accessed.
+    It collects ECS task metadata and returns the metrics in plain text format.
+    """
     metrics_data = collect_ecs_task_metadata()
     return Response(content=metrics_data, media_type="text/plain")
 
 
 @app.get("/stats", response_class=JSONResponse)
-def stats():
+def stats_endpoint():
     """
     Endpoint to provide raw JSON statistics.
 
     This function is called when the '/stats' endpoint is accessed.
     It returns raw JSON statistics obtained from the ECS metadata endpoint.
     """
-    _, stats = fetch_task_metadata()
-    return JSONResponse(content=stats)
+    _, task_stats = fetch_task_metadata()
+    return JSONResponse(content=task_stats)
 
 
 @app.get("/task", response_class=JSONResponse)
-def task():
+def task_endpoint():
     """
     Endpoint to provide raw JSON task metadata.
 
     This function is called when the '/task' endpoint is accessed.
     It returns raw JSON task metadata obtained from the ECS metadata endpoint.
     """
-    task, _ = fetch_task_metadata()
-    return JSONResponse(content=task)
+    task_metadata, _ = fetch_task_metadata()
+    return JSONResponse(content=task_metadata)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(LISTEN_PORT), reload=False)

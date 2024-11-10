@@ -1,5 +1,10 @@
+"""
+Mock endpoints for testing ECS metrics exporter.
+"""
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+import uvicorn
 
 app = FastAPI()
 
@@ -252,12 +257,21 @@ test_json = {
                     "tx_dropped": 0,
                 }
             },
-            "network_rate_stats": {"rx_bytes_per_sec": 0.0, "tx_bytes_per_sec": 0.0},
+            "network_rate_stats": {
+                "rx_bytes_per_sec": 0.0,
+                "tx_bytes_per_sec": 0.0,
+            },
         },
     },
     "task": {
-        "Cluster": "arn:aws:ecs:ap-northeast-1:123456789012:cluster/cluster-name-test",
-        "TaskARN": "arn:aws:ecs:ap-northeast-1:123456789012:task/cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea",
+        "Cluster": (
+            "arn:aws:ecs:ap-northeast-1:123456789012:cluster/"
+            "cluster-name-test"
+        ),
+        "TaskARN": (
+            "arn:aws:ecs:ap-northeast-1:123456789012:task/"
+            "cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea"
+        ),
         "Family": "taskdef-name-test",
         "Revision": "123",
         "DesiredStatus": "RUNNING",
@@ -271,13 +285,27 @@ test_json = {
                 "DockerId": "49e756135b1849cf98cd6a12c78bc6ea-1059602171",
                 "Name": "containerA",
                 "DockerName": "containerA",
-                "Image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/image-name-test:1.0",
-                "ImageID": "sha256:7fd55a3ecafd3b5fe7b77ee9e548df0134c3ccf397a8e211ab59c19d8bed6246",
+                "Image": (
+                    "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/"
+                    "image-name-test:1.0"
+                ),
+                "ImageID": (
+                    "sha256:"
+                    "7fd55a3ecafd3b5fe7b77ee9e548df0134c3ccf397a8e211ab59c19d8bed6246"
+                ),
                 "Labels": {
-                    "com.amazonaws.ecs.cluster": "arn:aws:ecs:ap-northeast-1:123456789012:cluster/cluster-name-test",
+                    "com.amazonaws.ecs.cluster": (
+                        "arn:aws:ecs:ap-northeast-1:123456789012:"
+                        "cluster/cluster-name-test"
+                    ),
                     "com.amazonaws.ecs.container-name": "containerA",
-                    "com.amazonaws.ecs.task-arn": "arn:aws:ecs:ap-northeast-1:123456789012:task/cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea",
-                    "com.amazonaws.ecs.task-definition-family": "taskdef-name-test",
+                    "com.amazonaws.ecs.task-arn": (
+                        "arn:aws:ecs:ap-northeast-1:123456789012:task/"
+                        "cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea"
+                    ),
+                    "com.amazonaws.ecs.task-definition-family": (
+                        "taskdef-name-test"
+                    ),
                     "com.amazonaws.ecs.task-definition-version": "123",
                 },
                 "DesiredStatus": "RUNNING",
@@ -304,15 +332,24 @@ test_json = {
                         "MACAddress": "06:0b:1a:ac:ba:c1",
                         "IPv4SubnetCIDRBlock": "172.20.1.0/23",
                         "DomainNameServers": ["172.20.0.2"],
-                        "PrivateDNSName": "ip-172-20-1-2.ap-northeast-1.compute.internal",
+                        "PrivateDNSName": (
+                            "ip-172-20-1-2.ap-northeast-1.compute.internal"
+                        ),
                         "SubnetGatewayIpv4Address": "172.20.1.1/23",
                     }
                 ],
-                "ContainerARN": "arn:aws:ecs:ap-northeast-1:123456789012:container/cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea/14a55dac-fb57-46ef-b665-a1970797f35f",
+                "ContainerARN": (
+                    "arn:aws:ecs:ap-northeast-1:123456789012:container/"
+                    "cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea/"
+                    "14a55dac-fb57-46ef-b665-a1970797f35f"
+                ),
                 "LogOptions": {
                     "awslogs-group": "loggroupnametest",
                     "awslogs-region": "ap-northeast-1",
-                    "awslogs-stream": "containerA/containerA/49e756135b1849cf98cd6a12c78bc6ea",
+                    "awslogs-stream": (
+                        "containerA/containerA/"
+                        "49e756135b1849cf98cd6a12c78bc6ea"
+                    ),
                 },
                 "LogDriver": "awslogs",
             },
@@ -320,13 +357,27 @@ test_json = {
                 "DockerId": "49e756135b1849cf98cd6a12c78bc6ea-2485339635",
                 "Name": "containerB",
                 "DockerName": "containerB",
-                "Image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/image-name-containerB:1.00-01",
-                "ImageID": "sha256:3f1330724f81041dbec36aaea568982280e8804bd02b5ff51203944cf07a853f",
+                "Image": (
+                    "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/"
+                    "image-name-containerB:1.00-01"
+                ),
+                "ImageID": (
+                    "sha256:"
+                    "3f1330724f81041dbec36aaea568982280e8804bd02b5ff51203944cf07a853f"
+                ),
                 "Labels": {
-                    "com.amazonaws.ecs.cluster": "arn:aws:ecs:ap-northeast-1:123456789012:cluster/cluster-name-test",
+                    "com.amazonaws.ecs.cluster": (
+                        "arn:aws:ecs:ap-northeast-1:123456789012:"
+                        "cluster/cluster-name-test"
+                    ),
                     "com.amazonaws.ecs.container-name": "containerB",
-                    "com.amazonaws.ecs.task-arn": "arn:aws:ecs:ap-northeast-1:123456789012:task/cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea",
-                    "com.amazonaws.ecs.task-definition-family": "taskdef-name-test",
+                    "com.amazonaws.ecs.task-arn": (
+                        "arn:aws:ecs:ap-northeast-1:123456789012:task/"
+                        "cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea"
+                    ),
+                    "com.amazonaws.ecs.task-definition-family": (
+                        "taskdef-name-test"
+                    ),
                     "com.amazonaws.ecs.task-definition-version": "123",
                 },
                 "DesiredStatus": "RUNNING",
@@ -343,15 +394,24 @@ test_json = {
                         "MACAddress": "06:0b:1a:ac:ba:c1",
                         "IPv4SubnetCIDRBlock": "172.20.1.0/23",
                         "DomainNameServers": ["172.20.0.2"],
-                        "PrivateDNSName": "ip-172-20-50-87.ap-northeast-1.compute.internal",
+                        "PrivateDNSName": (
+                            "ip-172-20-50-87.ap-northeast-1.compute.internal"
+                        ),
                         "SubnetGatewayIpv4Address": "172.20.1.1/23",
                     }
                 ],
-                "ContainerARN": "arn:aws:ecs:ap-northeast-1:123456789012:container/cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea/93cb605a-155b-4dd3-afa7-f6ea191e6942",
+                "ContainerARN": (
+                    "arn:aws:ecs:ap-northeast-1:123456789012:container/"
+                    "cluster-name-test/49e756135b1849cf98cd6a12c78bc6ea/"
+                    "93cb605a-155b-4dd3-afa7-f6ea191e6942"
+                ),
                 "LogOptions": {
                     "awslogs-group": "loggroupnametest",
                     "awslogs-region": "ap-northeast-1",
-                    "awslogs-stream": "containerB/containerB/49e756135b1849cf98cd6a12c78bc6ea",
+                    "awslogs-stream": (
+                        "containerB/containerB/"
+                        "49e756135b1849cf98cd6a12c78bc6ea"
+                    ),
                 },
                 "LogDriver": "awslogs",
             },
@@ -363,12 +423,19 @@ test_json = {
 
 @app.get("/task")
 async def task():
+    """
+    Endpoint to provide mock task metadata.
+    """
     return JSONResponse(content=test_json["task"])
+
 
 @app.get("/task/stats")
 async def task_stats():
+    """
+    Endpoint to provide mock task statistics.
+    """
     return JSONResponse(content=test_json["stats"])
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

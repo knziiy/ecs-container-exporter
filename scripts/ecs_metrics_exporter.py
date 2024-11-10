@@ -38,6 +38,31 @@ registry = CollectorRegistry(auto_describe=False)
 
 
 def create_metrics(registry):
+    """
+    Creates and returns a dictionary of Prometheus metrics for ECS containers and tasks.
+
+    Args:
+        registry: The Prometheus registry to which the metrics will be registered.
+
+    Returns:
+        dict: A dictionary containing Prometheus Counter and Gauge metrics with the following keys:
+            - "counter_cpu_usage_sec": Counter for total CPU usage in seconds.
+            - "gauge_mem_usage_total_bytes": Gauge for total memory usage in bytes (including cache).
+            - "gauge_mem_usage_total_bytes_without_cache": Gauge for memory usage in bytes (excluding cache).
+            - "gauge_network_io_rx_bytes": Gauge for network I/O received bytes.
+            - "gauge_network_io_tx_bytes": Gauge for network I/O transmitted bytes.
+            - "gauge_block_io_read_bytes": Gauge for block I/O read bytes.
+            - "gauge_block_io_write_bytes": Gauge for block I/O write bytes.
+            - "gauge_block_io_read_ops": Gauge for block I/O read operations.
+            - "gauge_block_io_write_ops": Gauge for block I/O write operations.
+            - "gauge_pull_started_at_time": Gauge for task pull start time in epoch.
+            - "gauge_pull_stopped_at_time": Gauge for task pull stop time in epoch.
+            - "gauge_container_last_started_at_time": Gauge for the last container start time in epoch.
+            - "gauge_task_cpu_limit": Gauge for task CPU limit.
+            - "gauge_task_memory_limit_byte": Gauge for task memory limit in bytes.
+            - "ecs_metrics_exporter_success": Gauge indicating if the ECS metrics exporter succeeded (0 for failure, 1 for success).
+    """
+    
     labels = ["container_name", "container_id", "task_family", "task_revision"]
     return {
         "counter_cpu_usage_sec": Counter(

@@ -43,5 +43,13 @@ class TestMetricsEndpoint(unittest.TestCase):
         for pattern in patterns:
             self.assertRegex(content, pattern)
 
+    def test_stats_endpoint(self):
+        response = self.client.get("/stats")
+        self.assertEqual(response.status_code, 200)
+    
+    def test_tasks_endpoint(self):
+        response = self.client.get("/task")
+        self.assertEqual(response.status_code, 200)
+                                   
 if __name__ == "__main__":
     unittest.main()
